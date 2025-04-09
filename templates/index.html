@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qwen OCR - Image Text Extraction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .model-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .model-loaded {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .model-loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .model-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .file-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        .submit-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        .flash-message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .results-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .result-item {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tabs {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-btn {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 16px;
+            transition: 0.3s;
+        }
+        .tab-btn:hover {
+            background-color: #ddd;
+        }
+        .tab-btn.active {
+            background-color: #ccc;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .result-table td, .result-table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .result-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .raw-text {
+            white-space: pre-wrap;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .download-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .download-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+        .qwen-info {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            padding: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Qwen OCR - Image Text Extraction</h1>
+        
+        <div class="qwen-info">
+            <p>This application uses the Qwen-VL-Max model to extract text from images. The model is optimized for accurate text extraction and will preserve the formatting of the original text.</p>
+        </div>
+        
+        <!-- Model Status -->
+        <div id="model-status" class="model-status {% if model_loaded %}model-loaded{% else %}model-loading{% endif %}">
+            {% if model_loaded %}
+                Qwen model loaded and ready
+            {% else %}
+                Loading Qwen model... Please wait.
+            {% endif %}
+        </div>
+        
+        <!-- Flash Messages -->
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        
+        <!-- Upload Form -->
+        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="upload-form">
+            <div class="form-group">
+                <label for="files">Upload Images (up to 10):</label>
+                <input type="file" name="files[]" id="files" class="file-input" multiple accept=".jpg,.jpeg,.png" required>
+                <small>You can select up to 10 images at once.</small>
+            </div>
+            <button type="submit" class="submit-btn" id="submit-btn" {% if not model_loaded %}disabled{% endif %}>Process Images with Qwen</button>
+        </form>
+        
+        <!-- Load Model Button -->
+        <div class="form-group" style="margin-top: 20px;">
+            <button id="load-model-btn" class="submit-btn" {% if model_loaded %}disabled{% endif %}>Load Qwen Model</button>
+        </div>
+        
+        <!-- OCR Results -->
+        {% if ocr_results %}
+        <div class="results-container">
+            <h2>OCR Results from Qwen</h2>
+            
+            {% for result in ocr_results %}
+            <div class="result-item">
+                <h3>Source: {{ result['Source File'] }}</h3>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="openTab(event, 'tabular-{{ loop.index }}')">Tabular Format</button>
+                    <button class="tab-btn" onclick="openTab(event, 'raw-{{ loop.index }}')">Raw Text</button>
+                </div>
+                
+                <div id="tabular-{{ loop.index }}" class="tab-content" style="display: block;">
+                    <h4>Tabular Format:</h4>
+                    <div class="table-container">
+                        <table class="result-table">
+                            {% set lines = result['Tabular Text'].split('\n') %}
+                            {% for line in lines %}
+                                {% if line.strip() %}
+                                    <tr>
+                                        {% if ',' in line %}
+                                            {% set cells = line.split(',') %}
+                                            {% for cell in cells %}
+                                                <td>{{ cell.strip() }}</td>
+                                            {% endfor %}
+                                        {% else %}
+                                            <td>{{ line.strip() }}</td>
+                                        {% endif %}
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="raw-{{ loop.index }}" class="tab-content" style="display: none;">
+                    <h4>Raw Text:</h4>
+                    <pre class="raw-text">{{ result['Raw Text'] }}</pre>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if csv_download_path %}
+            <div class="download-container">
+                <p>Results have been automatically saved to: {{ csv_download_path }}</p>
+                <a href="{{ url_for('download_file', filename=csv_download_path.split('/')[-1]) }}" class="download-btn">Download CSV</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Function to check model status
+        function checkModelStatus() {
+            fetch('/models')
+                .then(response => response.json())
+                .then(data => {
+                    const modelStatus = document.getElementById('model-status');
+                    const submitBtn = document.getElementById('submit-btn');
+                    const loadModelBtn = document.getElementById('load-model-btn');
+                    
+                    if (data.current_model) {
+                        modelStatus.textContent = `Qwen model loaded and ready`;
+                        modelStatus.className = "model-status model-loaded";
+                        submitBtn.disabled = false;
+                        loadModelBtn.disabled = true;
+                    } else {
+                        modelStatus.textContent = "Qwen model not loaded. Please click 'Load Qwen Model' button.";
+                        modelStatus.className = "model-status model-error";
+                        submitBtn.disabled = true;
+                        loadModelBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking model status:', error);
+                });
+        }
+        
+        // Load model button click handler
+        document.getElementById('load-model-btn').addEventListener('click', function() {
+            const modelStatus = document.getElementById('model-status');
+            modelStatus.textContent = "Loading Qwen model... Please wait.";
+            modelStatus.className = "model-status model-loading";
+            
+            fetch('/load_model', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status.includes("successfully")) {
+                    modelStatus.textContent = `Qwen model loaded and ready`;
+                    modelStatus.className = "model-status model-loaded";
+                    document.getElementById('submit-btn').disabled = false;
+                    document.getElementById('load-model-btn').disabled = true;
+                } else {
+                    modelStatus.textContent = `Error: ${data.status}`;
+                    modelStatus.className = "model-status model-error";
+                }
+            })
+            .catch(error => {
+                modelStatus.textContent = "Error loading Qwen model. Please try again.";
+                modelStatus.className = "model-status model-error";
+            });
+        });
+        
+        function openTab(evt, tabName) {
+            var i, tabContent, tabButtons;
+            
+            // Hide all tab content
+            tabContent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabContent.length; i++) {
+                tabContent[i].style.display = "none";
+            }
+            
+            // Remove "active" class from all tab buttons
+            tabButtons = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+            }
+            
+            // Show the current tab and add "active" class to the button
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
+</body>
+</html>
