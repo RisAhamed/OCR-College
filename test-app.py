@@ -41,10 +41,58 @@ current_model_name = "Qwen/Qwen2.5-VL-32B-Instruct-AWQ"
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# def load_model():
+#     """
+#     Loads the model directly from Hugging Face using the repository identifier.
+#     The model is downloaded (if not already cached) into the MODEL_DIR folder.
+#     """
+#     global model, processor, model_loading, model_loaded, current_model_name
+
+#     if model_loading:
+#         return "Model is already being loaded"
+#     if model_loaded:
+#         return "Model is already loaded"
+    
+#     model_loading = True
+#     try:
+#         print(f"Loading model '{current_model_name}' from Hugging Face (cache directory: {MODEL_DIR})")
+        
+#         # Upgrade autoawq if needed (required for quantized models)
+#         try:
+#             subprocess.check_call(["pip", "install", "autoawq>=0.1.8", "--upgrade"])
+#             print("autoawq upgraded successfully.")
+#         except Exception as e:
+#             print(f"Warning: Could not upgrade autoawq: {e}")
+        
+#         # Load processor and model directly from Hugging Face
+#         processor = AutoProcessor.from_pretrained(
+#             current_model_name,
+#             trust_remote_code=True,
+#             cache_dir=MODEL_DIR
+#         )
+#         model = AutoModelForImageTextToText.from_pretrained(
+#             current_model_name,
+#             trust_remote_code=True,
+#             device_map="auto",
+#             cache_dir=MODEL_DIR
+#         )
+        
+#         model_loaded = True
+#         print("Model loaded successfully from Hugging Face.")
+#         return "Model loaded successfully"
+#     except Exception as e:
+#         print(f"Error loading model: {e}")
+#         model_loading = False
+#         return f"Error loading model: {e}"
+#     finally:
+#         model_loading = False
+from transformers import AutoProcessor, AutoModelForImageTextToText
+
 def load_model():
     """
-    Loads the model directly from Hugging Face using the repository identifier.
-    The model is downloaded (if not already cached) into the MODEL_DIR folder.
+    Load the Qwen model directly from Hugging Face using its repository ID.
+    The model will be downloaded to the MODEL_DIR cache (if not already cached)
+    and quantization settings are disabled by setting quantization_config to None.
     """
     global model, processor, model_loading, model_loaded, current_model_name
 
@@ -57,14 +105,8 @@ def load_model():
     try:
         print(f"Loading model '{current_model_name}' from Hugging Face (cache directory: {MODEL_DIR})")
         
-        # Upgrade autoawq if needed (required for quantized models)
-        try:
-            subprocess.check_call(["pip", "install", "autoawq>=0.1.8", "--upgrade"])
-            print("autoawq upgraded successfully.")
-        except Exception as e:
-            print(f"Warning: Could not upgrade autoawq: {e}")
-        
-        # Load processor and model directly from Hugging Face
+        # (Remove autoawq upgrade subprocess to avoid dependency conflicts)
+        # Load processor and model directly from Hugging Face, with caching in MODEL_DIR.
         processor = AutoProcessor.from_pretrained(
             current_model_name,
             trust_remote_code=True,
@@ -74,7 +116,8 @@ def load_model():
             current_model_name,
             trust_remote_code=True,
             device_map="auto",
-            cache_dir=MODEL_DIR
+            cache_dir=MODEL_DIR,
+            quantization_config=None  # Disable quantization skipping
         )
         
         model_loaded = True

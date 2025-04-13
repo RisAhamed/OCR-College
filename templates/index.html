@@ -178,11 +178,11 @@
         </div>
         
         <!-- Model Status -->
-        <div id="model-status" class="model-status {% if model_loaded %}model-loaded{% else %}model-loading{% endif %}">
+        <div class="model-status {% if model_loaded %}model-loaded{% else %}model-loading{% endif %}">
             {% if model_loaded %}
-                Qwen model loaded and ready
+                Model loaded and ready
             {% else %}
-                Loading Qwen model... Please wait.
+                Loading model... Please wait
             {% endif %}
         </div>
         
@@ -206,11 +206,6 @@
             </div>
             <button type="submit" class="submit-btn" id="submit-btn" {% if not model_loaded %}disabled{% endif %}>Process Images with Qwen</button>
         </form>
-        
-        <!-- Load Model Button -->
-        <div class="form-group" style="margin-top: 20px;">
-            <button id="load-model-btn" class="submit-btn" {% if model_loaded %}disabled{% endif %}>Load Qwen Model</button>
-        </div>
         
         <!-- OCR Results -->
         {% if ocr_results %}
@@ -274,51 +269,21 @@
                 .then(data => {
                     const modelStatus = document.getElementById('model-status');
                     const submitBtn = document.getElementById('submit-btn');
-                    const loadModelBtn = document.getElementById('load-model-btn');
                     
                     if (data.current_model) {
                         modelStatus.textContent = `Qwen model loaded and ready`;
                         modelStatus.className = "model-status model-loaded";
                         submitBtn.disabled = false;
-                        loadModelBtn.disabled = true;
                     } else {
-                        modelStatus.textContent = "Qwen model not loaded. Please click 'Load Qwen Model' button.";
+                        modelStatus.textContent = "Qwen model not loaded. Please click 'Process Images with Qwen' button.";
                         modelStatus.className = "model-status model-error";
                         submitBtn.disabled = true;
-                        loadModelBtn.disabled = false;
                     }
                 })
                 .catch(error => {
                     console.error('Error checking model status:', error);
                 });
         }
-        
-        // Load model button click handler
-        document.getElementById('load-model-btn').addEventListener('click', function() {
-            const modelStatus = document.getElementById('model-status');
-            modelStatus.textContent = "Loading Qwen model... Please wait.";
-            modelStatus.className = "model-status model-loading";
-            
-            fetch('/load_model', {
-                method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status.includes("successfully")) {
-                    modelStatus.textContent = `Qwen model loaded and ready`;
-                    modelStatus.className = "model-status model-loaded";
-                    document.getElementById('submit-btn').disabled = false;
-                    document.getElementById('load-model-btn').disabled = true;
-                } else {
-                    modelStatus.textContent = `Error: ${data.status}`;
-                    modelStatus.className = "model-status model-error";
-                }
-            })
-            .catch(error => {
-                modelStatus.textContent = "Error loading Qwen model. Please try again.";
-                modelStatus.className = "model-status model-error";
-            });
-        });
         
         function openTab(evt, tabName) {
             var i, tabContent, tabButtons;
